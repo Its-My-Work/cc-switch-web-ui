@@ -1,32 +1,37 @@
+# Этап сборки (build)
 FROM node:20-alpine AS build
 
+# Рабочая директория
 WORKDIR /app
 
-# сначала только package*.json, чтобы кешировалось
+# Копируем только package*.json для кеша npm ci
 COPY package*.json ./
 
-# ставим ВСЕ зависимости, включая dev (vite)
+# Ставим ВСЕ зависимости, включая dev (vite, tsx, typescript и т.п.)
 RUN npm ci
 
-# теперь весь код
+# Копируем остальной код
 COPY . .
 
-# сборка клиента и сервера
+# Собираем клиент и сервер
 RUN npm run build
 
-# продовый рантайм
+# Этап рантайма (production)
 FROM node:20-alpine AS runtime
 
 WORKDIR /app
 
 ENV NODE_ENV=production
 
-# только прод-зависимости
+# Ставим только прод-зависимости
 COPY package*.json ./
 RUN npm ci --omit=dev
 
-# копируем собранный server + статик
+# Копируем собранный сервер + фронт из build-стейджа
 COPY --from=build /app/dist ./dist
 
+# Порт из package.json / сервера
 EXPOSE 3010
+
+# Запускаем продовый сервер
 CMD ["npm", "start"]
