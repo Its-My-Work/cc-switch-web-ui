@@ -1,19 +1,32 @@
-FROM node:20-bookworm
+FROM node:20-alpine AS build
 
 WORKDIR /app
 
+# сначала только package*.json, чтобы кешировалось
 COPY package*.json ./
-RUN npm install
 
+# ставим ВСЕ зависимости, включая dev (vite)
+RUN npm ci
+
+# теперь весь код
 COPY . .
 
-# Сборка production-бандла
+# сборка клиента и сервера
 RUN npm run build
 
+# продовый рантайм
+FROM node:20-alpine AS runtime
+
+WORKDIR /app
+
 ENV NODE_ENV=production
-ENV PORT=3010
-ENV HOST=0.0.0.0
+
+# только прод-зависимости
+COPY package*.json ./
+RUN npm ci --omit=dev
+
+# копируем собранный server + статик
+COPY --from=build /app/dist ./dist
 
 EXPOSE 3010
-
-CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0", "--port", "3010"]
+CMD ["npm", "start"]
