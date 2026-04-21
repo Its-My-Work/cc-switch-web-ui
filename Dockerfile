@@ -3,9 +3,12 @@ FROM node:20-bookworm
 WORKDIR /app
 
 COPY package*.json ./
-RUN npm install --production
+RUN npm install
 
 COPY . .
+
+# Сборка production-бандла
+RUN npm run build
 
 ENV NODE_ENV=production
 ENV PORT=3010
